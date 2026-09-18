@@ -15,14 +15,13 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_compress import Compress
 from functools import wraps
+from dotenv import load_dotenv
+load_dotenv()
+from src.storage import DATA_DIR, DB_FILE
 from src.crawler import WebCrawler
 from src.settings_manager import SettingsManager
 from src.auth_db import init_db, create_user, authenticate_user, get_user_by_id, log_guest_crawl, get_guest_crawls_last_24h, verify_user, set_user_tier, create_verification_token, verify_token, get_user_by_email
 from src.email_service import send_verification_email, send_welcome_email
-
-# Load environment variables from .env file
-from dotenv import load_dotenv
-load_dotenv()
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='LibreCrawl - SEO Spider Tool')
@@ -38,7 +37,7 @@ parser.add_argument('--dangerously-skip-auth', '-dsa', action='store_true',
                     help='DANGEROUS: Allow anyone to log in as any username with no password. '
                          'The username is only used to separate per-user sessions. '
                          'Do NOT use on a public network or in production.')
-args = parser.parse_args()
+args = parser.parse_args() if __name__ == '__main__' else parser.parse_args([])
 
 LOCAL_MODE = args.local or os.getenv('LOCAL_MODE', '').lower() in ('true', '1', 'yes')
 DISABLE_REGISTER = args.disable_register or os.getenv('REGISTRATION_DISABLED', '').lower() in ('true', '1', 'yes')
@@ -56,7 +55,7 @@ if not os.environ.get('SECRET_KEY'):
 Compress(app)
 
 # Ensure data directory exists before initializing the database
-os.makedirs("data", exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 # Initialize database on startup
 init_db()
@@ -70,7 +69,7 @@ def auto_login_local_mode():
     """Auto-login for local mode - creates or logs into 'local' admin account"""
     import sqlite3
     try:
-        conn = sqlite3.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'users.db'))
+        conn = sqlite3.connect(DB_FILE)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -125,7 +124,7 @@ def skip_auth_login(username):
     """
     import sqlite3
     try:
-        conn = sqlite3.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'users.db'))
+        conn = sqlite3.connect(DB_FILE)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -568,7 +567,7 @@ def register():
             from src.auth_db import verify_user, set_user_tier
             # Get the user that was just created
             import sqlite3
-            conn = sqlite3.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'users.db'))
+            conn = sqlite3.connect(DB_FILE)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
@@ -1245,7 +1244,7 @@ def crawl_stats():
         import sqlite3
 
         # Get counts by status
-        conn = sqlite3.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'users.db'))
+        conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
 
         cursor.execute('''

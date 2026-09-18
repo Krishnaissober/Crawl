@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from contextlib import contextmanager
 
 # Database file location - stored in data/ for Docker volume persistence
-DB_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'users.db')
+from src.storage import DB_FILE
 
 @contextmanager
 def get_db():

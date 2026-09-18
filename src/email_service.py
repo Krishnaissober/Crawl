@@ -14,7 +14,7 @@ def get_env(key: str, default: str = '') -> str:
 
 # Email configuration
 SMTP_HOST = get_env('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT = int(get_env('SMTP_PORT', '587'))
+SMTP_PORT = int(get_env('SMTP_PORT', '587').strip() or '587')
 SMTP_USER = get_env('SMTP_USER', '')
 SMTP_PASSWORD = get_env('SMTP_PASSWORD', '')
 SMTP_FROM = get_env('SMTP_FROM', 'noreply@librecrawl.com')

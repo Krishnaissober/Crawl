@@ -318,5 +318,12 @@ LibreCrawl supports multiple concurrent users with isolated sessions:
 ## License
 
 MIT License - see LICENSE file for details.
-#   C r a w l  
+#   C r a w l 
  
+ 
+
+## Vercel startup compatibility
+
+When `VERCEL=1`, SQLite files are created in `/tmp/librecrawl/data` rather than the read-only application directory. This allows the Flask UI to start, but storage is ephemeral and is not shared across function instances. Accounts, settings, and crawl history can disappear on a cold start; background crawls and Playwright rendering are not guaranteed to work on this platform. Use Docker with a persistent volume for reliable production crawling.
+
+Set a stable `SECRET_KEY` in deployment environment variables. `SMTP_PORT` defaults to 587 when unset or blank. For desktop or Docker deployments, `LIBRECRAWL_DATA_DIR` can override the default project `data` directory.

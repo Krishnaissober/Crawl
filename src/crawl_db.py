@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 # Database file location (same as auth database) - stored in data/ for Docker volume persistence
 import os
-DB_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'users.db')
+from src.storage import DB_FILE
 
 @contextmanager
 def get_db():
