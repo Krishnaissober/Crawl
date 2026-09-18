@@ -300,7 +300,7 @@ class WebCrawler:
             ]
         }
 
-    def start_crawl(self, url, user_id=None, session_id=None):
+    def start_crawl(self, url, user_id=None, session_id=None, run_in_background=True):
         """Start crawling from the given URL"""
         if self.is_running:
             return False, "Crawl already in progress"
@@ -352,8 +352,11 @@ class WebCrawler:
 
             # Start crawling in separate thread
             self.is_running = True
-            self.crawl_thread = threading.Thread(target=self._crawl_worker)
-            self.crawl_thread.start()
+            if run_in_background:
+                self.crawl_thread = threading.Thread(target=self._crawl_worker)
+                self.crawl_thread.start()
+            else:
+                self._crawl_worker()
 
             return True, "Crawl started successfully"
 
@@ -870,12 +873,17 @@ class WebCrawler:
 
         # Traditional HTTP crawling with smooth rate limiting
         max_workers = self.config.get('concurrency', 5)
+        request_budget = self.config.get('request_time_budget')
+        deadline = time.monotonic() + request_budget if request_budget else None
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             active_futures = {}
 
             while self.is_running:
                 try:
+                    if deadline and time.monotonic() >= deadline:
+                        self.request_limit_reached = True
+                        break
                     # Check if paused
                     if self.is_paused:
                         time.sleep(1)

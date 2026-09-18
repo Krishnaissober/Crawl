@@ -740,9 +740,11 @@ def start_crawl():
     # Get or create crawler for this session (this also ensures the session
     # has a session_id — reading it earlier would return None on a session
     # whose first API call is start_crawl, silently disabling persistence)
-    crawler = get_or_create_crawler()
-    settings_manager = get_session_settings()
-    session_id = session.get('session_id')
+    serverless = os.getenv('VERCEL') == '1'
+    crawler = WebCrawler() if serverless else get_or_create_crawler()
+    settings_manager = (SettingsManager(user_id=user_id, tier=tier)
+                        if serverless else get_session_settings())
+    session_id = None if serverless else session.get('session_id')
 
     # Apply current settings to crawler before starting
     try:
@@ -756,8 +758,39 @@ def start_crawl():
         crawler.config['demo_mode'] = True
         crawler.config['demo_memory_limit_bytes'] = int(1.5 * 1024 * 1024 * 1024)  # 1.5GB
 
-    # Pass user_id and session_id for database persistence
-    success, message = crawler.start_crawl(url, user_id=user_id, session_id=session_id)
+    # Vercel instances do not share crawler memory. Finish a bounded extraction
+    # inside this request and send its snapshot directly to the browser.
+    if serverless:
+        if crawler.config.get('enable_javascript'):
+            return jsonify({'success': False, 'error': 'JavaScript rendering requires the persistent Docker server.'}), 400
+        crawler.update_config({
+            'max_urls': min(crawler.config['max_urls'], 50),
+            'timeout': min(crawler.config['timeout'], 5),
+            'retries': 0,
+            'concurrency': 3,
+            'delay': min(crawler.config['delay'], 1),
+            'discover_sitemaps': False,
+            'enable_pagespeed': False,
+            'enable_duplication_check': False,
+            'request_time_budget': 30,
+        })
+
+    success, message = crawler.start_crawl(
+        url, user_id=user_id, session_id=session_id,
+        run_in_background=not serverless)
+
+    if serverless:
+        result = crawler.get_status() if success else None
+        if result is not None:
+            result['stats']['baseUrl'] = crawler.base_url
+            result['issues'] = filter_issues_by_exclusion_patterns(
+                result.get('issues', []), get_exclusion_patterns(settings_manager))
+        return jsonify({
+            'success': success, 'message': message, 'result': result,
+            'error': None if success else message,
+            'limited': bool(getattr(crawler, 'request_limit_reached', False)) or crawler.pages_crawled >= 50,
+            'mode': 'request',
+        })
 
     # Store crawl_id in session
     if success and crawler.crawl_id:

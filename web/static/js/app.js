@@ -378,6 +378,24 @@ function startPythonCrawl(url) {
     .then(data => {
         if (!data) return;
         if (data.success) {
+            if (data.mode === 'request' && data.result) {
+                crawlState.isRunning = false;
+                crawlState.isPaused = false;
+                updateCrawlData(data.result);
+                updateCrawlButtons();
+                hideProgress();
+                updateStatus(data.limited
+                    ? 'Extraction finished at the Vercel limit (50 pages or 30 seconds).'
+                    : 'Link extraction completed');
+                loadUserInfo();
+                if (window.LibreCrawlPlugin && window.LibreCrawlPlugin.loader) {
+                    window.LibreCrawlPlugin.loader.notifyCrawlComplete({
+                        urls: crawlState.urls, links: crawlState.links,
+                        issues: crawlState.issues, stats: crawlState.stats
+                    });
+                }
+                return;
+            }
             updateStatus('Crawling in progress...');
             // Refresh user info to update crawl count
             loadUserInfo();
