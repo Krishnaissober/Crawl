@@ -385,7 +385,7 @@ function startPythonCrawl(url) {
                 updateCrawlButtons();
                 hideProgress();
                 updateStatus(data.limited
-                    ? 'Extraction finished at the Vercel limit (50 pages or 30 seconds).'
+                    ? 'Extraction finished at the Vercel limit (500 pages or 4 minutes).'
                     : 'Link extraction completed');
                 loadUserInfo();
                 if (window.LibreCrawlPlugin && window.LibreCrawlPlugin.loader) {

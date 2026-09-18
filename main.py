@@ -764,7 +764,7 @@ def start_crawl():
         if crawler.config.get('enable_javascript'):
             return jsonify({'success': False, 'error': 'JavaScript rendering requires the persistent Docker server.'}), 400
         crawler.update_config({
-            'max_urls': min(crawler.config['max_urls'], 50),
+            'max_urls': min(crawler.config['max_urls'], 500),
             'timeout': min(crawler.config['timeout'], 5),
             'retries': 0,
             'concurrency': 3,
@@ -772,7 +772,7 @@ def start_crawl():
             'discover_sitemaps': False,
             'enable_pagespeed': False,
             'enable_duplication_check': False,
-            'request_time_budget': 30,
+            'request_time_budget': 240,
         })
 
     success, message = crawler.start_crawl(
@@ -788,7 +788,7 @@ def start_crawl():
         return jsonify({
             'success': success, 'message': message, 'result': result,
             'error': None if success else message,
-            'limited': bool(getattr(crawler, 'request_limit_reached', False)) or crawler.pages_crawled >= 50,
+            'limited': bool(getattr(crawler, 'request_limit_reached', False)) or crawler.pages_crawled >= 500,
             'mode': 'request',
         })
 

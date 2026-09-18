@@ -328,4 +328,6 @@ When `VERCEL=1`, SQLite files are created in `/tmp/librecrawl/data` rather than 
 
 Set a stable `SECRET_KEY` in deployment environment variables. `SMTP_PORT` defaults to 587 when unset or blank. For desktop or Docker deployments, `LIBRECRAWL_DATA_DIR` can override the default project `data` directory.
 
-On Vercel, link extraction runs inside a single request and returns the page/link snapshot directly to the browser. Each run is limited to 50 pages or a 30-second crawl budget (in-flight HTTP requests may take additional time). Results remain visible when instances change because there is no background status polling. JavaScript rendering requires Docker; sitemap discovery, PageSpeed, and duplicate-content analysis remain available on the persistent server.
+On Vercel, link extraction runs inside a single request and returns the page/link snapshot directly to the browser. Each run is limited to 500 pages or a 4-minute crawl budget (in-flight HTTP requests may take additional time). Results remain visible when instances change because there is no background status polling. JavaScript rendering requires Docker; sitemap discovery, PageSpeed, and duplicate-content analysis remain available on the persistent server.
+
+The Vercel function timeout is 300 seconds, leaving one minute after the 240-second crawl budget for in-flight requests and preparing the response. Fluid Compute must be enabled for the five-minute timeout on the Hobby plan.
