@@ -344,6 +344,17 @@ function clearCrawlData() {
     document.getElementById('urlInput').focus();
 }
 
+function failCrawlStart(message, authenticationRequired = false) {
+    crawlState.isRunning = false;
+    crawlState.isPaused = false;
+    updateCrawlButtons();
+    hideProgress();
+    updateStatus('Error: ' + message);
+    if (authenticationRequired) {
+        window.location.assign('/login');
+    }
+}
+
 function startPythonCrawl(url) {
     // Call Python backend to start crawling
     fetch('/api/start_crawl', {
@@ -353,8 +364,19 @@ function startPythonCrawl(url) {
         },
         body: JSON.stringify({ url: url })
     })
-    .then(response => response.json())
+    .then(async response => {
+        if (response.status === 401) {
+            failCrawlStart('Your session expired. Please sign in again.', true);
+            return null;
+        }
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Could not start crawl');
+        }
+        return data;
+    })
     .then(data => {
+        if (!data) return;
         if (data.success) {
             updateStatus('Crawling in progress...');
             // Refresh user info to update crawl count
@@ -362,14 +384,12 @@ function startPythonCrawl(url) {
             // Start polling for updates
             pollCrawlProgress();
         } else {
-            updateStatus('Error: ' + data.error);
-            stopCrawl();
+            failCrawlStart(data.error || data.message || 'Could not start crawl');
         }
     })
     .catch(error => {
         console.error('Error starting crawl:', error);
-        updateStatus('Error starting crawl');
-        stopCrawl();
+        failCrawlStart(error.message || 'Could not start crawl');
     });
 }
 
@@ -441,6 +461,10 @@ function pollCrawlProgress() {
         })
         .catch(error => {
             console.error('Error polling crawl status:', error);
+            if (error.authenticationRequired) {
+                failCrawlStart('Your session expired. Please sign in again.', true);
+                return;
+            }
             // Continue polling even if there's an error (common on large crawls)
             if (crawlState.isRunning) {
                 setTimeout(pollCrawlProgress, 1000);

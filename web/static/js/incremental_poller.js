@@ -97,6 +97,14 @@ class IncrementalPoller {
             });
 
             const response = await fetch(`/api/crawl_status?${params}`);
+            if (response.status === 401) {
+                const error = new Error('Authentication required');
+                error.authenticationRequired = true;
+                throw error;
+            }
+            if (!response.ok) {
+                throw new Error('Crawl status request failed: ' + response.status);
+            }
             const data = await response.json();
 
             // Stale epoch: the server has a new data generation — drop
